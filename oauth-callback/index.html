@@ -33,17 +33,19 @@
     const EXTENSION_ID = 'ommidbbaifeigmpmiaacjkmlljccpfki';
 
     function processOAuthCallback() {
-        console.log('🔗 Processing OAuth callback...');
+        console.log('🔗 Processing OAuth callback.....--..__..--..__..--..__');
         
         // For CODE flow, parameters are in search params
         const searchParams = new URLSearchParams(window.location.search);
         
         const code = searchParams.get('code');
+        const state = searchParams.get('state'); // Get the state parameter
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
         
         console.log('📨 OAuth parameters:', { 
             code: !!code, 
+            state: !!state,
             error 
         });
 
@@ -54,14 +56,17 @@
             return;
         }
 
-        if (code) {
-            console.log('✅ Authorization code received');
+        if (code && state) {
+            console.log('✅ Authorization code and state received');
             showSuccess('Authentication successful! Closing...');
-            sendToExtension({ code });
+            sendToExtension({ code, state });
         } else {
-            console.error('❌ No authorization code received');
-            showError('Authentication failed: No authorization code received');
-            sendToExtension({ error: 'No authorization code received' });
+            console.error('❌ Missing code or state');
+            const missing = [];
+            if (!code) missing.push('code');
+            if (!state) missing.push('state');
+            showError(`Authentication failed: Missing ${missing.join(' and ')}`);
+            sendToExtension({ error: `Missing ${missing.join(' and ')}` });
         }
     }
 
@@ -80,7 +85,8 @@
                     setTimeout(() => sendToExtension(data), 1000);
                 } else {
                     console.log('✅ Message sent to extension successfully');
-                    setTimeout(() => window.close(), 1000);
+                    // Don't try to close the window - let the user close it manually
+                    showSuccess('Authentication complete! You can close this window.');
                 }
             });
         } else {

@@ -29,87 +29,80 @@
     </div>
 
     <script>
-    const EXTENSION_ID = 'ommidbbaifeigmpmiaacjkmlljccpfki';
+        const EXTENSION_ID = 'ommidbbaifeigmpmiaacjkmlljccpfki';
 
-    function processOAuthCallback() {
-        console.log('🔗 Processing OAuth callback...');
-        console.log('📍 Full URL:', window.location.href);
-        
-        const searchParams = new URLSearchParams(window.location.search);
-        
-        // Log ALL parameters for debugging
-        const allParams = {};
-        for (const [key, value] of searchParams.entries()) {
-            allParams[key] = value;
+        function processOAuthCallback() {
+            console.log('🔗 Processing OAuth callback...');
+            console.log('📍 Full URL:', window.location.href);
+            
+            const searchParams = new URLSearchParams(window.location.search);
+            
+            // Log ALL parameters for debugging
+            const allParams = {};
+            for (const [key, value] of searchParams.entries()) {
+                allParams[key] = value;
+            }
+            console.log('📨 All URL parameters:', allParams);
+            
+            const code = searchParams.get('code');
+            const error = searchParams.get('error');
+            const errorDescription = searchParams.get('error_description');
+
+            if (error) {
+                console.error('❌ OAuth error:', error, errorDescription);
+                showError(`Authentication failed: ${errorDescription || error}`);
+                sendToExtension({ error: errorDescription || error });
+                return;
+            }
+
+            if (code) {
+                console.log('✅ Authorization code received');
+                console.log('🔑 Code length:', code.length);
+                showSuccess('Authentication successful! Processing...');
+                sendToExtension({ code });
+            } else {
+                console.error('❌ No authorization code received');
+                showError('Authentication failed: No authorization code received');
+                sendToExtension({ error: 'No authorization code received' });
+            }
         }
-        console.log('📨 All URL parameters:', allParams);
-        
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
-        const error = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
 
-        if (error) {
-            console.error('❌ OAuth error:', error, errorDescription);
-            showError(`Authentication failed: ${errorDescription || error}`);
-            sendToExtension({ error: errorDescription || error });
-            return;
+        function sendToExtension(data) {
+            console.log('📤 Sending data to extension:', data);
+            
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage(EXTENSION_ID, {
+                    type: 'OAUTH_CALLBACK',
+                    ...data
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.log('⚠️ Extension not ready:', chrome.runtime.lastError);
+                        showError('Extension not ready. Please return to the extension and try again.');
+                    } else {
+                        console.log('✅ Message sent to extension successfully');
+                        showSuccess('Authentication complete! You can close this window.');
+                    }
+                });
+            } else {
+                console.log('⚠️ Chrome runtime not available');
+                showError('Chrome extension context not available. Please return to the extension.');
+            }
         }
 
-        if (code && state) {
-            console.log('✅ Authorization code and state received');
-            console.log('🔑 Code length:', code.length);
-            console.log('🔐 State:', state);
-            showSuccess('Authentication successful! Processing...');
-            // ✅ CRITICAL: Send BOTH code and state
-            sendToExtension({ code, state });
-        } else {
-            console.error('❌ Missing code or state');
-            const missing = [];
-            if (!code) missing.push('code');
-            if (!state) missing.push('state');
-            showError(`Authentication failed: Missing ${missing.join(' and ')}`);
-            sendToExtension({ error: `Missing ${missing.join(' and ')}` });
+        function showSuccess(message) {
+            document.getElementById('title').textContent = '✅ Authentication Successful';
+            document.getElementById('status').textContent = message;
+            document.body.style.background = '#f0fff0';
         }
-    }
 
-    function sendToExtension(data) {
-        console.log('📤 Sending data to extension:', data);
-        
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage(EXTENSION_ID, {
-                type: 'OAUTH_CALLBACK',
-                ...data
-            }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.log('⚠️ Extension not ready:', chrome.runtime.lastError);
-                    showError('Extension not ready. Please return to the extension and try again.');
-                } else {
-                    console.log('✅ Message sent to extension successfully');
-                    showSuccess('Authentication complete! You can close this window.');
-                }
-            });
-        } else {
-            console.log('⚠️ Chrome runtime not available');
-            showError('Chrome extension context not available. Please return to the extension.');
+        function showError(message) {
+            document.getElementById('title').textContent = '❌ Authentication Failed';
+            document.getElementById('status').textContent = message;
+            document.getElementById('status').style.color = 'red';
+            document.body.style.background = '#fff0f0';
         }
-    }
 
-    function showSuccess(message) {
-        document.getElementById('title').textContent = '✅ Authentication Successful';
-        document.getElementById('status').textContent = message;
-        document.body.style.background = '#f0fff0';
-    }
-
-    function showError(message) {
-        document.getElementById('title').textContent = '❌ Authentication Failed';
-        document.getElementById('status').textContent = message;
-        document.getElementById('status').style.color = 'red';
-        document.body.style.background = '#fff0f0';
-    }
-
-    document.addEventListener('DOMContentLoaded', processOAuthCallback);
-</script>
-
+        document.addEventListener('DOMContentLoaded', processOAuthCallback);
+    </script>
 </body>
 </html>

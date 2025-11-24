@@ -33,21 +33,23 @@
     const EXTENSION_ID = 'ommidbbaifeigmpmiaacjkmlljccpfki';
 
     function processOAuthCallback() {
-        console.log('🔗 Processing OAuth callback.....--..__..--..__..--..__');
+        console.log('🔗 Processing OAuth callback....');
+        console.log('📍 Full URL:', window.location.href);
         
         // For CODE flow, parameters are in search params
         const searchParams = new URLSearchParams(window.location.search);
         
+        // Log ALL parameters for debugging
+        const allParams = {};
+        for (const [key, value] of searchParams.entries()) {
+            allParams[key] = value;
+        }
+        console.log('📨 All URL parameters:', allParams);
+        
         const code = searchParams.get('code');
-        const state = searchParams.get('state'); // Get the state parameter
+        const state = searchParams.get('state');
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
-        
-        console.log('📨 OAuth parameters:', { 
-            code: !!code, 
-            state: !!state,
-            error 
-        });
 
         if (error) {
             console.error('❌ OAuth error:', error, errorDescription);
@@ -58,7 +60,9 @@
 
         if (code && state) {
             console.log('✅ Authorization code and state received');
-            showSuccess('Authentication successful! Closing...');
+            console.log('🔑 Code length:', code.length);
+            console.log('🔐 State:', state);
+            showSuccess('Authentication successful! Processing...');
             sendToExtension({ code, state });
         } else {
             console.error('❌ Missing code or state');
@@ -81,11 +85,9 @@
             }, (response) => {
                 if (chrome.runtime.lastError) {
                     console.log('⚠️ Extension not ready:', chrome.runtime.lastError);
-                    // Extension might not be ready yet, wait a bit and try again
-                    setTimeout(() => sendToExtension(data), 1000);
+                    showError('Extension not ready. Please return to the extension and try again.');
                 } else {
                     console.log('✅ Message sent to extension successfully');
-                    // Don't try to close the window - let the user close it manually
                     showSuccess('Authentication complete! You can close this window.');
                 }
             });
@@ -98,12 +100,14 @@
     function showSuccess(message) {
         document.getElementById('title').textContent = '✅ Authentication Successful';
         document.getElementById('status').textContent = message;
+        document.body.style.background = '#f0fff0';
     }
 
     function showError(message) {
         document.getElementById('title').textContent = '❌ Authentication Failed';
         document.getElementById('status').textContent = message;
         document.getElementById('status').style.color = 'red';
+        document.body.style.background = '#fff0f0';
     }
 
     // Start processing when page loads
